@@ -1,0 +1,8 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+  <Include file="..\db\trTR\items-tbc.lua"/>
+  <Include file="..\db\trTR\units-tbc.lua"/>
+  <Include file="..\db\trTR\objects-tbc.lua"/>
+  <Include file="..\db\trTR\quests-tbc.lua"/>
+  <Include file="..\db\trTR\zones-tbc.lua"/>
+  <Include file="..\db\trTR\professions-tbc.lua"/>
+</Ui>
