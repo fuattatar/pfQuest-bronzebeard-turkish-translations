@@ -2,6 +2,9 @@
 
 Bu eklenti, **Ascension WoW** sunucusunun **Bronzebeard** diyarı (realm) için popüler görev eklentisi olan **pfQuest**'e yönelik Türkçe görev çevirilerini içermektedir. Bu veri paketi sayesinde oyundaki görev metinlerini, hedeflerini ve açıklamalarını Türkçe olarak görüntüleyebilirsiniz.
 
+NOT: Görevler sürekli ekleniyor. Düzenli araklıklarla güncellemeyi unutmayın.
+NOT: WOWTR(https://www.wowtr.com.tr/) isimli addonun veritabanı kullanılmıştır. Kendilerine böyle bir addon yaptıkları için teşekkür ediyoruz.
+
 ## ✨ Özellikler
 
 * **Ascension Bronzebeard Uyumlu:** Sunucuya özel eklenen veya değiştirilen görev zincirleri ve metinleri dikkate alınarak hazırlanmıştır.
