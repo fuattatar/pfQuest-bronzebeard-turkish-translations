@@ -1,0 +1,1 @@
+pfDB["quests"]["trTR-tbc"] = {}
