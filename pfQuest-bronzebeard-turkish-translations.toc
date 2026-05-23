@@ -1,0 +1,6 @@
+## Title: pfQuest [|cff33ffccBronzebeard Türkçe Çeviri|r]
+## Notes: pfQuest için Bronzebeard veritabanı Türkçe çeviri modülü.
+## Author: fuattatar
+## Version: v1.0.5
+## RequiredDeps: pfQuest
+

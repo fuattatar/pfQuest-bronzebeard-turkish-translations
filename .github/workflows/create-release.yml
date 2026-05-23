@@ -1,16 +1,11 @@
-name: Manuel Release Oluşturucu
+name: Otomatik Release Oluşturucu
 
 on:
-  workflow_dispatch:
-    inputs:
-      version_tag:
-        description: 'v1.0.5'
-        required: true
-        default: 'v1.0.5'
-      interface_version:
-        description: ''
-        required: false
-        default: ''
+  push:
+    branches:
+      - master # main
+    paths-ignore:
+      - '.github/**' # Workflow dosyası değiştiğinde kendi kendine sonsuz döngüye girmesin
 
 jobs:
   build-and-release:
@@ -19,16 +14,29 @@ jobs:
       - name: Kodu Klonla
         uses: actions/checkout@v4
 
+      - name: Sürüm Bilgilerini Hazırla
+        id: vars
+        run: |
+          # Bugünün tarihini al (Yıl.Ay.Gün formatında, Örn: 2026.05.23)
+          DATE=$(date +'%Y.%m.%d')
+          # Commit'in ilk 7 haneli kısa ID'sini al (Örn: a1b2c3d)
+          SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          
+          # Benzersiz bir tag oluşturuyoruz (Örn: v2026.05.23-a1b2c3d)
+          TAG_NAME="v${DATE}-${SHA}"
+          
+          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "Oluşturulan Benzersiz Etiket: ${TAG_NAME}"
+
       - name: Addon Klasörünü Hazırla ve TOC Güncelle
         run: |
-          # 1. Dağıtım klasörünü oluştur
           FOLDER_NAME="pfQuest-bronzebeard-turkish-translations"
           mkdir -p "$FOLDER_NAME"
           
-          # 2. Git dosyaları hariç her şeyi kopyala
+          # Git dosyaları hariç her şeyi kopyala
           rsync -av --progress . "$FOLDER_NAME" --exclude .git --exclude .github
           
-          # 3. .toc dosyasının adını bul (klasör içinde arıyoruz)
+          # .toc dosyasını bul
           TOC_FILE=$(find "$FOLDER_NAME" -maxdepth 1 -name "*.toc" | head -n 1)
           
           if [ -z "$TOC_FILE" ]; then
@@ -36,32 +44,24 @@ jobs:
             exit 1
           fi
           
-          echo "Bulunan TOC dosyası: $TOC_FILE"
+          # .toc dosyasındaki '## Version:' satırını otomatik oluşturduğumuz etiketle değiştir
+          sed -i "s/^## Version:.*/## Version: ${{ steps.vars.outputs.tag_name }}/g" "$TOC_FILE"
           
-          # 4. Version alanını güncelle (Giriş yapılan versiyon etiketini yazar)
-          # '## Version:' ile başlayan satırı tamamen yeni versiyonla değiştirir
-          sed -i "s/^## Version:.*/## Version: ${{ github.event.inputs.version_tag }}/g" "$TOC_FILE"
-          
-          # 5. Eğer kullanıcı yeni bir Interface sürümü girdiyse onu da güncelle
-          if [ ! -z "${{ github.event.inputs.interface_version }}" ]; then
-            sed -i "s/^## Interface:.*/## Interface: ${{ github.event.inputs.interface_version }}/g" "$TOC_FILE"
-          fi
-          
-          # Güncellenmiş içeriği loglarda kontrol etmek için yazdıralım
           echo "--- Güncellenmiş TOC İçeriği ---"
-          cat "$TOC_FILE" | grep -E "^## (Version|Interface):"
+          cat "$TOC_FILE" | grep -E "^## Version:"
           
-          # 6. Klasörü zipler
+          # Klasörü zipler
           zip -r "$FOLDER_NAME.zip" "$FOLDER_NAME"
 
       - name: GitHub Release Oluştur ve Dosyayı Yükle
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.version_tag }}
-          name: "Sürüm ${{ github.event.inputs.version_tag }}"
+          tag_name: ${{ steps.vars.outputs.tag_name }}
+          name: "Sürüm ${{ steps.vars.outputs.tag_name }}"
           body: |
-            pfQuest Bronzebeard Türkçe Çeviri Güncellemesi.
+            Otomatik pfQuest Bronzebeard Türkçe Çeviri Güncellemesi.
             
+            **Commit Mesajı:** ${{ github.event.head_commit.message }}
             **Kurulum:** İndirdiğiniz zip dosyasını `Interface\AddOns\` klasörüne çıkarın.
           files: pfQuest-bronzebeard-turkish-translations.zip
         env:
