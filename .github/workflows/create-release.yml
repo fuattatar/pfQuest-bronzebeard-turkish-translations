@@ -3,7 +3,7 @@ name: Otomatik Release Oluşturucu
 on:
   push:
     branches:
-      - main
+      - main # Eğer ana branch adınız 'main' ise burayı main yapın
     paths-ignore:
       - '.github/**' # Sonsuz döngüyü engeller
 
@@ -22,32 +22,24 @@ jobs:
           # Commit'in kısa ID'sini al
           SHA=$(echo ${{ github.sha }} | cut -c1-7)
           
-          # Benzersiz tag (Örn: v2026.05.23-a1b2c3d)
+          # Benzersiz tag (Örn: v2026.05.24-a1b2c3d)
           TAG_NAME="v${DATE}-${SHA}"
           
           echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
 
-      - name: Addon Klasörünü Hazırla ve TOC Güncelle
+      - name: Doğrudan Zip Oluştur
         run: |
-          FOLDER_NAME="pfQuest-bronzebeard-turkish-translations"
-          mkdir -p "$FOLDER_NAME"
-          
-          # Git dosyaları hariç her şeyi oluşturduğumuz klasöre kopyala
-          rsync -av --progress . "$FOLDER_NAME" --exclude .git --exclude .github
-          
-          # Klasörün içindeki .toc dosyasını bul ve versiyonu güncelle
-          TOC_FILE="${FOLDER_NAME}/${FOLDER_NAME}.toc"
-          
-          if [ -f "$TOC_FILE" ]; then
+          # Ana dizindeki (varsa) .toc dosyasının versiyonunu doğrudan güncelle
+          # Eğer ileride .toc dosyası eklerseniz otomatik güncellenir, yoksa hata vermeden geçer
+          TOC_FILE=$(find . -maxdepth 1 -name "*.toc" | head -n 1)
+          if [ ! -z "$TOC_FILE" ]; then
             sed -i "s/^## Version:.*/## Version: ${{ steps.vars.outputs.tag_name }}/g" "$TOC_FILE"
-            echo "--- TOC Dosyası Başarıyla Güncellendi ---"
+            echo "--- TOC Dosyası Güncellendi ---"
             cat "$TOC_FILE" | grep "^## Version:"
-          else
-            echo "UYARI: .toc dosyası klasör içinde bulunamadı!"
           fi
           
-          # Klasörü zipler
-          zip -r "$FOLDER_NAME.zip" "$FOLDER_NAME"
+          # Gereksiz git ve github klasörlerini dahil etmeden doğrudan ana dizini zipler
+          zip -r pfQuest-bronzebeard-turkish-translations.zip . -x "*.git*" -x "*.github*"
 
       - name: GitHub Release Oluştur ve Dosyayı Yükle
         uses: softprops/action-gh-release@v2
@@ -58,7 +50,6 @@ jobs:
             Otomatik pfQuest Bronzebeard Türkçe Çeviri Güncellemesi.
             
             **Son Değişiklik:** ${{ github.event.head_commit.message }}
-            **Kurulum:** İndirdiğiniz zip dosyasını `Interface\AddOns\` klasörüne çıkarın.
           files: pfQuest-bronzebeard-turkish-translations.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
