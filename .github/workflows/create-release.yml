@@ -1,12 +1,16 @@
-name: Release Generate
+name: Manuel Release Oluşturucu
 
 on:
   workflow_dispatch:
     inputs:
       version_tag:
-        description: '1.0.5'
+        description: 'v1.0.5'
         required: true
         default: 'v1.0.5'
+      interface_version:
+        description: ''
+        required: false
+        default: ''
 
 jobs:
   build-and-release:
@@ -15,16 +19,40 @@ jobs:
       - name: Kodu Klonla
         uses: actions/checkout@v4
 
-      - name: Addon Klasörünü Hazırla ve Zipler
+      - name: Addon Klasörünü Hazırla ve TOC Güncelle
         run: |
-          # WoW klasör yapısına uygun olması için dosyaları addon adına sahip bir klasöre topluyoruz
-          mkdir -p pfQuest-bronzebeard-turkish-translations
+          # 1. Dağıtım klasörünü oluştur
+          FOLDER_NAME="pfQuest-bronzebeard-turkish-translations"
+          mkdir -p "$FOLDER_NAME"
           
-          # Git dosyaları ve workflow klasörü hariç her şeyi kopyala
-          rsync -av --progress . pfQuest-bronzebeard-turkish-translations --exclude .git --exclude .github
+          # 2. Git dosyaları hariç her şeyi kopyala
+          rsync -av --progress . "$FOLDER_NAME" --exclude .git --exclude .github
           
-          # Klasörü zipler
-          zip -r pfQuest-bronzebeard-turkish-translations.zip pfQuest-bronzebeard-turkish-translations
+          # 3. .toc dosyasının adını bul (klasör içinde arıyoruz)
+          TOC_FILE=$(find "$FOLDER_NAME" -maxdepth 1 -name "*.toc" | head -n 1)
+          
+          if [ -z "$TOC_FILE" ]; then
+            echo "HATA: .toc dosyası bulunamadı!"
+            exit 1
+          fi
+          
+          echo "Bulunan TOC dosyası: $TOC_FILE"
+          
+          # 4. Version alanını güncelle (Giriş yapılan versiyon etiketini yazar)
+          # '## Version:' ile başlayan satırı tamamen yeni versiyonla değiştirir
+          sed -i "s/^## Version:.*/## Version: ${{ github.event.inputs.version_tag }}/g" "$TOC_FILE"
+          
+          # 5. Eğer kullanıcı yeni bir Interface sürümü girdiyse onu da güncelle
+          if [ ! -z "${{ github.event.inputs.interface_version }}" ]; then
+            sed -i "s/^## Interface:.*/## Interface: ${{ github.event.inputs.interface_version }}/g" "$TOC_FILE"
+          fi
+          
+          # Güncellenmiş içeriği loglarda kontrol etmek için yazdıralım
+          echo "--- Güncellenmiş TOC İçeriği ---"
+          cat "$TOC_FILE" | grep -E "^## (Version|Interface):"
+          
+          # 6. Klasörü zipler
+          zip -r "$FOLDER_NAME.zip" "$FOLDER_NAME"
 
       - name: GitHub Release Oluştur ve Dosyayı Yükle
         uses: softprops/action-gh-release@v2
