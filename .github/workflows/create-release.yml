@@ -3,9 +3,9 @@ name: Otomatik Release Oluşturucu
 on:
   push:
     branches:
-      - master # main
+      - main
     paths-ignore:
-      - '.github/**' # Workflow dosyası değiştiğinde kendi kendine sonsuz döngüye girmesin
+      - '.github/**' # Sonsuz döngüyü engeller
 
 jobs:
   build-and-release:
@@ -17,38 +17,34 @@ jobs:
       - name: Sürüm Bilgilerini Hazırla
         id: vars
         run: |
-          # Bugünün tarihini al (Yıl.Ay.Gün formatında, Örn: 2026.05.23)
+          # Bugünün tarihini al (Format: YYYY.MM.DD)
           DATE=$(date +'%Y.%m.%d')
-          # Commit'in ilk 7 haneli kısa ID'sini al (Örn: a1b2c3d)
+          # Commit'in kısa ID'sini al
           SHA=$(echo ${{ github.sha }} | cut -c1-7)
           
-          # Benzersiz bir tag oluşturuyoruz (Örn: v2026.05.23-a1b2c3d)
+          # Benzersiz tag (Örn: v2026.05.23-a1b2c3d)
           TAG_NAME="v${DATE}-${SHA}"
           
           echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
-          echo "Oluşturulan Benzersiz Etiket: ${TAG_NAME}"
 
       - name: Addon Klasörünü Hazırla ve TOC Güncelle
         run: |
           FOLDER_NAME="pfQuest-bronzebeard-turkish-translations"
           mkdir -p "$FOLDER_NAME"
           
-          # Git dosyaları hariç her şeyi kopyala
+          # Git dosyaları hariç her şeyi oluşturduğumuz klasöre kopyala
           rsync -av --progress . "$FOLDER_NAME" --exclude .git --exclude .github
           
-          # .toc dosyasını bul
-          TOC_FILE=$(find "$FOLDER_NAME" -maxdepth 1 -name "*.toc" | head -n 1)
+          # Klasörün içindeki .toc dosyasını bul ve versiyonu güncelle
+          TOC_FILE="${FOLDER_NAME}/${FOLDER_NAME}.toc"
           
-          if [ -z "$TOC_FILE" ]; then
-            echo "HATA: .toc dosyası bulunamadı!"
-            exit 1
+          if [ -f "$TOC_FILE" ]; then
+            sed -i "s/^## Version:.*/## Version: ${{ steps.vars.outputs.tag_name }}/g" "$TOC_FILE"
+            echo "--- TOC Dosyası Başarıyla Güncellendi ---"
+            cat "$TOC_FILE" | grep "^## Version:"
+          else
+            echo "UYARI: .toc dosyası klasör içinde bulunamadı!"
           fi
-          
-          # .toc dosyasındaki '## Version:' satırını otomatik oluşturduğumuz etiketle değiştir
-          sed -i "s/^## Version:.*/## Version: ${{ steps.vars.outputs.tag_name }}/g" "$TOC_FILE"
-          
-          echo "--- Güncellenmiş TOC İçeriği ---"
-          cat "$TOC_FILE" | grep -E "^## Version:"
           
           # Klasörü zipler
           zip -r "$FOLDER_NAME.zip" "$FOLDER_NAME"
@@ -61,7 +57,7 @@ jobs:
           body: |
             Otomatik pfQuest Bronzebeard Türkçe Çeviri Güncellemesi.
             
-            **Commit Mesajı:** ${{ github.event.head_commit.message }}
+            **Son Değişiklik:** ${{ github.event.head_commit.message }}
             **Kurulum:** İndirdiğiniz zip dosyasını `Interface\AddOns\` klasörüne çıkarın.
           files: pfQuest-bronzebeard-turkish-translations.zip
         env:
