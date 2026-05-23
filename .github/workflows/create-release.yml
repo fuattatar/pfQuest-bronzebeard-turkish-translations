@@ -1,0 +1,40 @@
+name: Release Generate
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: '1.0.5'
+        required: true
+        default: 'v1.0.5'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kodu Klonla
+        uses: actions/checkout@v4
+
+      - name: Addon Klasörünü Hazırla ve Zipler
+        run: |
+          # WoW klasör yapısına uygun olması için dosyaları addon adına sahip bir klasöre topluyoruz
+          mkdir -p pfQuest-bronzebeard-turkish-translations
+          
+          # Git dosyaları ve workflow klasörü hariç her şeyi kopyala
+          rsync -av --progress . pfQuest-bronzebeard-turkish-translations --exclude .git --exclude .github
+          
+          # Klasörü zipler
+          zip -r pfQuest-bronzebeard-turkish-translations.zip pfQuest-bronzebeard-turkish-translations
+
+      - name: GitHub Release Oluştur ve Dosyayı Yükle
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version_tag }}
+          name: "Sürüm ${{ github.event.inputs.version_tag }}"
+          body: |
+            pfQuest Bronzebeard Türkçe Çeviri Güncellemesi.
+            
+            **Kurulum:** İndirdiğiniz zip dosyasını `Interface\AddOns\` klasörüne çıkarın.
+          files: pfQuest-bronzebeard-turkish-translations.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
